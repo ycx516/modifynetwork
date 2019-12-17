@@ -1,0 +1,31 @@
+---
+- name: Stop ComputeHA Monitor Service
+  service: name=computeha-monitor state=stopped
+  when: inventory_hostname in groups["consul_servers"]
+
+- name: Stop ComputeHA Slave Service
+  service:
+    name: computeha-slave
+    state: stopped
+
+- name: Update mgmt Network
+  shell: python "{{ role_path }}/files/modify_mgmt.py" '{{ request }}'
+  async: 0
+  poll: 30
+
+- name: Config local ip
+  shell: ansible-playbook -i /usr/share/kolla/ansible/inventory/consul_io.py /usr/lib/python2.7/site-packages/awstackhcl/controllers/ansible/set_local_ip.yml
+
+- name: Generate kolla pass
+  shell: python "{{ role_path }}/files/generate_pass.py"
+
+- name: Set pass dir
+  set_fact:
+    pass_dir: "/usr/lib/python2.7/site-packages/awstackhcl/controllers/ansible/roles/modify_mgmt_ip/files/vault_pass.txt"
+
+- name: Computeha config and restart
+  shell: ansible-playbook -i /usr/share/kolla/ansible/inventory/consul_io.py --vault-pass {{ pass_dir }} -e 'action=modify_storage_network' -e 'mgmtnet_update=ture' /usr/share/kolla/ansible/awstack-computeha.yml
+  run_once: True
+
+- name: Clear the pass
+  shell: rm -rf {{ pass_dir }}

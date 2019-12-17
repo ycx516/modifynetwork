@@ -1,0 +1,5 @@
+- name: Read mgmt Configuration
+  include_vars: ip_addr.json
+
+- name: Config local ip
+  shell: sed -i 's/{{ old_mgmt_addr }}/{{ mgmt_addr }}/g' /opt/awstack/etc/config/local_ip

@@ -1,0 +1,25 @@
+{
+    "old_gateway":"172.16.4.254",
+    "old_mgmt_addr":"172.16.4.161",
+    "netmask":"255.255.255.0",
+    "floating_gateway":"172.16.4.254",
+    "old_saas_addr":"172.16.4.253",
+    "floating_netmask":"255.255.255.0",
+    "gateway":"172.16.4.254",
+    "mgmt_addr":"172.16.4.161",
+    "floating_cidr":"172.16.4.0/24",
+    "floating_start":"172.16.4.151",
+    "old_netmask":"255.255.255.0",
+    "floating_end":"172.16.4.155",
+    "floating_vlan":null,
+    "saas_addr":"172.16.4.253",
+    "ntp_servers":[
+        "cn.pool.ntp.org"
+    ],
+    "old_ntp_servers":[
+        "cn.pool.ntp.org"
+    ],
+    "network_type":"vlan",
+    "vlan_start":1100,
+    "vlan_end":2100
+}

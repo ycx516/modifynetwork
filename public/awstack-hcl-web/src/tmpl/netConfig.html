@@ -1,0 +1,313 @@
+<div id="main">
+  <div class="container">
+    <div class="host-box">     
+	    <div class="container-box">
+	    	<ul class="step-progress">
+	    		<li ng-class="{'active': stepOneActive}">
+		            <i>1</i><span>环境验证</span>
+	            </li>
+	            <li ng-class="{'active': stepTwoActive}">
+		            <i>2</i><span>认证登录</span>
+	            </li>
+	            <li ng-class="{'active': stepThreeActive}">
+		            <i>3</i><span>网络配置</span>
+	            </li>
+	    	</ul>    
+		</div>
+
+        <form name="ipForm" novalidate>
+            <div class="container-box box-wrap">
+                <div class="control-group cloud-ip">
+                    <label class="control-label">云管IP</label>
+                    <div class="controls">
+                        <input type="text" class="form-controls" name="saas_addr"  ng-model="data.saas_addr" ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" placeholder="请输入" required/>
+                        <div class="error" ng-messages="ipForm.saas_addr.$error" ng-if="interacted(ipForm.saas_addr)">
+                            <form-validate pattern-msg="ipErrorMsg"></form-validate>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="container-box box-wrap">
+                <div class="manage-ip">
+                    <h4 class="title">管理网</h4>
+                    <div class="ip-range">
+                        <div class="control-group">
+                            <label class="control-label">起始IP：</label>
+                            <div class="controls">  
+                                <input type="text" class="form-controls" name="mgmt_startIp" ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" placeholder="请输入" ng-model="data.mgmt_startIp" id="mgmt_startIp"/>
+                                <div class="error" ng-messages="ipForm.mgmt_startIp.$error" ng-if="interacted(ipForm.mgmt_startIp)">
+                                    <form-validate pattern-msg="ipErrorMsg"></form-validate>
+                                </div> 
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">结束IP：</label>
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="mgmt_endIp" ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" num="nodelist.length-1"  ng-model="data.mgmt_endIp" gtipnum="mgmt_startIp"/>
+                                <div class="error" ng-messages="ipForm.mgmt_endIp.$error" ng-if="interacted(ipForm.mgmt_endIp)">
+                                    <form-validate pattern-msg="ipErrorMsg"></form-validate>
+                                    <div ng-message="gtipnum">结束IP必须大于起始IP{{nodelist.length-1}}个</div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-next" ng-click="fill()">自动填充</button>
+                        <div class="fill" ng-if="canNotFill">结束IP和起始IP不满足条件</div>
+                    </div>
+                    <div ng-if="nodelist.length==0" class="noNode">暂时未获取到节点数据</div>
+                    <div class="node-list">
+                        <div class="node-box">
+                            <div class="control-group" ng-repeat="node in nodelist">
+                                <label class="control-label">{{node.hostname}}：</label>
+                                <div class="controls">  
+                                    <input type="text" class="form-controls" placeholder="请输入" name="node_{{$index}}"  ng-model="node.ipaddr" start-ip="data.mgmt_startIp" end-ip="data.mgmt_endIp" in-ip-range ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" required/> 
+                                    <div class="error" ng-messages="ipForm['node_'+$index].$error" ng-if="interacted(ipForm['node_'+$index])">
+                                        <form-validate pattern-msg="ipErrorMsg"></form-validate>
+                                        <div ng-message="iniprange">IP不在起始和结束IP之间</div>  
+                                    </div>
+                                </div> 
+                            </div>
+                        </div>
+                    </div>
+                    <!-- <div class="page-box">
+                        <span ng-repeat="page in pageList" ng-class="{'active':selectedPage==page}" ng-click="clickPage(page)">{{page}}</span>
+                    </div> -->
+                    <div class="ip-range">
+                        <div class="control-group">
+                            <label class="control-label">子网掩码：</label>
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="mgmt_netmask"  ng-model="data.mgmt_netmask" ng-pattern="/^(254|252|248|240|224|192|128|0)\.0\.0\.0|255\.(254|252|248|240|224|192|128|0)\.0\.0|255\.255\.(254|252|248|240|224|192|128|0)\.0|255\.255\.255\.(254|252|248|240|224|192|128|0)$/" required/> 
+                                <div class="error" ng-messages="ipForm.mgmt_netmask.$error" ng-if="interacted(ipForm.mgmt_netmask)">
+                                    <form-validate pattern-msg="netMaskError"></form-validate>
+                                </div> 
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">网关：</label>
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="mgmt_gateway"  ng-model="data.mgmt_gateway" ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" required/> 
+                                <div class="error" ng-messages="ipForm.mgmt_gateway.$error" ng-if="interacted(ipForm.mgmt_gateway)">
+                                    <form-validate pattern-msg="gatewayErrorMsg"></form-validate>
+                                </div> 
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">DNS地址：</label>
+                            <div class="controls">
+                                <input type="text" class="form-controls" placeholder="请输入" name="mgmt_dns"  ng-model="data.mgmt_dns" ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" required/> 
+                                <div class="error" ng-messages="ipForm.mgmt_dns.$error" ng-if="interacted(ipForm.mgmt_dns)">
+                                    <form-validate pattern-msg="dnsError"></form-validate>
+                                </div>  
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">ntp服务器：</label>
+                            <div class="controls">
+                                <input type="text" class="form-controls" placeholder="请输入" name="ntp"  ng-model="data.ntp" required/> 
+                                <div class="error" ng-messages="ipForm.ntp.$error" ng-if="interacted(ipForm.ntp)">
+                                    <form-validate></form-validate>
+                                </div>  
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ip-range">
+                        <div class="control-group">
+                            <label class="control-label">启动VLAN：</label>
+                            <div class="controls">  
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" name="publicCheck" ng-model="data.floating_vlan_switch"/><i class="icon-aw-square"></i>
+                                    </label>
+                                </div> 
+                            </div> 
+                        </div>
+                        <div class="control-group" ng-if="data.floating_vlan_switch">
+                            <label class="control-label">VLAN标签：</label>
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="mgmt_vlan" logicalvlanlimit  ng-model="data.mgmt_vlan"  required/> 
+                                <div class="error" ng-messages="ipForm.mgmt_vlan.$error" ng-if="interacted(ipForm.mgmt_vlan)">
+                                    <div ng-message="required">必填项</div>
+                                    <div ng-message="logicalvlanlimit">取值范围为2-4095</div>
+                                </div> 
+                            </div>
+                        </div>
+                    </div>
+                </div>    
+            </div>
+            <div class="container-box box-wrap">
+                <div class="public-ip">
+                    <h4 class="title">业务网</h4>
+                    <div class="ip-range">
+                        <div class="cidr">
+                            <div class="control-group">
+                                <label class="control-label">CIDR：</label>
+                                    <div class="controls">
+                                    <input type="text" class="form-controls" placeholder="请输入" name="floating_cidr"  ng-model="data.floating_cidr" ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))[\/]([1-9]|[1-2][0-9]|[3][0]|[3][1])$/" required/>
+                                    <div class="error" ng-messages="ipForm.floating_cidr.$error" ng-if="interacted(ipForm.floating_cidr)">
+                                       <form-validate pattern-msg="cidrErrorMsg"></form-validate>
+                                    </div>
+                                </div>
+                            </div> 
+                        </div>
+                    </div>
+                    <div class="ip-range">
+                        <div class="control-group">
+                             <label class="control-label">起始IP：</label>
+                             <div class="controls">
+                                <input type="text" class="form-controls" placeholder="请输入" name="floating_start"  ng-model="data.floating_start" id="floating_start"  ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" incidr cidr-val="data.floating_cidr" required/>
+                                <div class="error" ng-messages="ipForm.floating_start.$error" ng-show="interacted(ipForm.floating_start)">
+                                   <form-validate pattern-msg="ipErrorMsg"></form-validate>
+                                   <div ng-message="incidr">IP地址不在CIDR内</div>
+                                </div>
+                             </div>
+                        </div>
+                        <div class="control-group">
+                             <label class="control-label">结束IP：</label>
+                             <div class="controls">
+                                <input type="text" class="form-controls" placeholder="请输入" name="floating_end"  ng-model="data.floating_end" gtip="floating_start"  ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" incidr cidr-val="data.floating_cidr" required/>
+                                <div class="error" ng-messages="ipForm.floating_end.$error" ng-show="interacted(ipForm.floating_end)">
+                                   <form-validate pattern-msg="ipErrorMsg"></form-validate>
+                                   <div ng-message="gtip">结束IP必须大于起始IP</div>
+                                   <div ng-message="incidr">IP地址不在CIDR内</div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                    <div class="gateway ip-range">
+                        <div class="control-group">
+                            <label class="control-label">网关：</label>
+                            <div class="controls">
+                                <input type="text" class="form-controls" placeholder="请输入" name="floating_gateway"  ng-model="data.floating_gateway" incidr cidr-val="data.floating_cidr"  ng-pattern="/^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$/" required/>
+                                <div class="error" ng-messages="ipForm.floating_gateway.$error" ng-show="interacted(ipForm.floating_gateway)">
+                                   <form-validate pattern-msg="gatewayErrorMsg"></form-validate>
+                                   <div ng-message="incidr">网关地址不在CIDR内</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">子网掩码：</label>
+                            <div class="controls">
+                                <input type="text" class="form-controls" placeholder="请输入" name="floating_netmask"  ng-model="data.floating_netmask" ng-pattern="/^(254|252|248|240|224|192|128|0)\.0\.0\.0|255\.(254|252|248|240|224|192|128|0)\.0\.0|255\.255\.(254|252|248|240|224|192|128|0)\.0|255\.255\.255\.(254|252|248|240|224|192|128|0)$/" mask-correct cidr-value="data.floating_cidr" required/>
+                                <div class="error" ng-messages="ipForm.floating_netmask.$error" ng-show="interacted(ipForm.floating_netmask)">
+                                     <form-validate pattern-msg="netMaskError"></form-validate>
+                                     <div ng-message="maskcorrect">子网掩码输入错误</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ip-range">
+                    <div class="control-group">
+                        <label class="control-label">启动VLAN：</label>
+                        <div class="controls">  
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="floating_vlan_switch"  ng-model="data.floating_vlan_switch"/><i class="icon-aw-square"></i>    
+                                </label>
+                            </div> 
+                        </div> 
+                    </div>
+                    <div class="control-group" ng-if="data.floating_vlan_switch">
+                        <label class="control-label">VLAN标签：</label>
+                        <div class="controls">  
+                            <input type="text" class="form-controls" placeholder="请输入" name="floating_vlan" logicalvlanlimit  ng-model="data.floating_vlan"  required/> 
+                            <div class="error" ng-messages="ipForm.floating_vlan.$error" ng-if="interacted(ipForm.floating_vlan)">
+                                <div ng-message="required">必填项</div>
+                                <div ng-message="logicalvlanlimit">取值范围为2-4095</div>
+                            </div> 
+                        </div>
+                    </div>
+                </div>    
+            </div>
+            <div class="container-box box-wrap">
+                <h4 class="title">租户网</h4>
+                <div class="ip-range">
+                    <div class="control-group">
+                        <label class="control-label">{{data.network_type.toUpperCase()}}范围：</label>
+                        <div ng-if="data.network_type=='vlan'">
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="tenantStart" vlan vlanlimitstart ng-model="data.vlan_range_start"  required/> 
+                                <div class="error" ng-messages="ipForm.tenantStart.$error" ng-if="interacted(ipForm.tenantStart)">
+                                    <div ng-message="required">必填项</div>
+                                    <div ng-message="vlan">起始vlan应比结束vlan小</div>
+                                    <div ng-message="vlanlimitstart">vlan的取值范围为2-4095</div>
+                                </div> 
+                            </div>
+                            <span class="middle-line">-</span>
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="tenantEnd" vlan vlanlimitend ng-model="data.vlan_range_end"  required/> 
+                                <div class="error" ng-messages="ipForm.tenantEnd.$error" ng-if="interacted(ipForm.tenantEnd)">
+                                    <div ng-message="required">必填项</div>
+                                    <div ng-message="vlan">结束vlan应比起始vlan大</div>
+                                    <div ng-message="vlanlimitend">vlan的取值范围为2-4095</div>
+                                </div> 
+                            </div>
+                        </div>
+                        <div ng-if="data.network_type=='vxlan'">
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="tenantStart" vlan vxlanlimitstart ng-model="data.vlan_range_start"  required/> 
+                                <div class="error" ng-messages="ipForm.tenantStart.$error" ng-if="interacted(ipForm.tenantStart)">
+                                    <div ng-message="required">必填项</div>
+                                    <div ng-message="vlan">起始vxlan应比结束vxlan小</div>
+                                    <div ng-message="vxlanlimitstart">vxlan的取值范围为1-16777215</div>
+                                </div> 
+                            </div>
+                            <span class="middle-line">-</span>
+                            <div class="controls">  
+                                <input type="text" class="form-controls" placeholder="请输入" name="tenantEnd" vlan vxlanlimitend ng-model="data.vlan_range_end"  required/> 
+                                <div class="error" ng-messages="ipForm.tenantEnd.$error" ng-if="interacted(ipForm.tenantEnd)">
+                                    <div ng-message="required">必填项</div>
+                                    <div ng-message="vlan">结束vxlan应比起始vxlan大</div>
+                                    <div ng-message="vxlanlimitend">vxlan的取值范围为1-16777215</div>
+                                </div> 
+                            </div>
+                            <span class="vxlan-tips" ng-show="vxlanTips">
+                               导入隔离标签数量过多会导致服务响应时间较长，请根据实际业务情况选择导入的vxlan标签隔离范围。 
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ip-range"  ng-if="data.network_type=='vlan'">
+                    <div class="control-group">
+                        <label class="control-label">高可用检测vlan：</label>
+                        <div class="controls">  
+                            <input type="text" class="form-controls" placeholder="请输入" name="ha_vlan" logicalvlanlimit  ng-model="data.ha_vlan"/> 
+                            <div class="error" ng-messages="ipForm.ha_vlan.$error" ng-if="interacted(ipForm.ha_vlan)">
+                                <div ng-message="logicalvlanlimit">取值范围为2-4095</div>
+                            </div> 
+                        </div>
+                    </div>
+                </div> 
+            </div>        
+        </form>
+        <div class="error-msg">
+            <div class="red" ng-if="ipEqToGateway">业务网起始IP和结束IP范围内含有被网关占用的IP({{data.floating_gateway}})</div>
+            <div class="red" ng-if="repeatNodeIp">管理网中的节点IP重复</div>
+            <div class="red" ng-if="modifySuccess">管理网中的节点IP重复</div>
+            <div class="red" ng-if="floatVlanTips">业务网vlan不能在租户网{{data.network_type}}范围内</div>
+            <div class="red" ng-if="mgmtVlanTips">管理网vlan不能在租户网{{data.network_type}}范围内</div>
+            <div class="red" ng-if="haVlanTips">高可用vlan不能在租户网{{data.network_type}}范围内</div>
+            <div class="red" ng-if="sassIpTips">云管ip地址不在管理网网关和掩码限制网络范围内</div>
+            <div class="red" ng-if="nodeIpTips">节点ip地址不在管理网网关和掩码限制网络范围内</div>
+            <div class="red" ng-if="saasNodeIpTips">节点ip地址与云管ip冲突</div>
+        </div>
+		<div class="text-center">
+			<button class="btn btn-next" ng-click="changeStep('/loginSaas')" ng-disabled="" type="button">{{'aws.register.info.last'|translate}}</button>
+	        <button class="btn btn-next" ng-click="confirm(ipForm)" ng-disabled="" type="button">{{'aws.action.ok'|translate}}</button>
+	         <button class="btn btn-next" ng-click="clear()" ng-disabled="" type="button">{{'aws.action.empty'|translate}}</button>
+	    </div>
+    </div>
+    <div class="delete-wrap" ng-if="showAlert">
+        <div class="delete-alert delete-show">
+            <div class="alert alert-danger">
+              <button type="button" class="close" ng-if="modifyResult!='modifying'" ng-click="close()">
+                  <span aria-hidden="true">×</span>
+              </button>
+              <div class="del-cont"><span>{{modifyResult=='modifying'?"网络配置修改中.....":modifyResult=='success'?"网络配置成功，请进行关机操作！":modifyResult=='fail'?"网络配置修改失败！":modifyResult=='shutdown'?"关机成功!":modifyResult=='shutdownerror'?"关机失败！":""}}</span></div>
+              <div class="btn-item" ng-if="modifyResult=='success'">
+                <button type="button" class="btn btn-next" ng-click="toSass()">一键关机</button>
+              </div>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>

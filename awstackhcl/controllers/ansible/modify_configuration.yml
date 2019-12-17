@@ -1,0 +1,10 @@
+---
+- hosts: all
+  name: Modify mgmt configuration
+  roles:
+    - { role: modify_mgmt_ip, tags: modify_mgmt_ip }
+
+- hosts: all
+  name: Modify Saas and floating configuration
+  roles:
+    - { role: modify_saas_ip, tags: modify_saas_ip }

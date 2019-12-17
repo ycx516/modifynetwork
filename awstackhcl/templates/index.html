@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html ng-app="app">
+  <head>
+    <meta charset="utf-8">
+    <meta name="renderer" content="webkit" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta name="format-detection" content="telephone=no, email=no, adress=no" />
+    <!-- <title  ng-bind="pathTitle +' - ' + siteTitle"></title> -->
+    <title  ng-bind="pathTitle"></title>
+      <script src="./js/config.js" id="page-config" data-js="
+      jquery.min.js
+      angular.min.js
+      angular-route.min.js
+      angular-messages.min.js
+      angular-translate.min.js
+      ui-bootstrap-tpls.js
+      select.min.js
+      ng-table.min.js
+      angular-sanitize.min.js
+      " data-css="
+      bootstrap.min.css
+      select.min.css
+      "></script>
+    <link rel="stylesheet" href="./css/common.css">
+    <link rel="stylesheet" href="./css/index.css">
+    <!-- <link rel="shortcut icon" href="./favicon.ico"/>
+    <link rel="bookmark" href="./favicon.ico"/> -->
+  </head>
+<body ng-controller="mainCtrl" class="modal-open" ng-class="{'isLogin':isLogin}" auto-height>
+  <header>
+    <div class="container">
+      <div class="logo">
+        <!-- <a><img ng-src="{{imgsrcCommon}}" alt="" ng-if="imgsrcCommon"/></a> -->
+      </div>
+    </div>
+  </header>
+  <div class="main">
+    <div ng-view>
+    </div>
+  </div>
+  <footer>
+    <div class="container">
+      <p class="copyright" ng-bind="copyright" ng-if="copyrightShowStatus"></p>
+    </div>
+  </footer>
+  <script type="text/javascript">
+    // if(window.location.protocol=="http:"){
+    //     window.location.href="https:"+window.location.href.split("http:")[1];
+    // }
+  </script>
+  <script src="./js/index.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  name: Set ip addr
+  roles:
+    - { role: set_local_ip, tags: set_local_ip }

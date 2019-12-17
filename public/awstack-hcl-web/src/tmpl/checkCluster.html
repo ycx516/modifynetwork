@@ -1,0 +1,89 @@
+<div id="main">
+  <div class="container">
+    <div class="host-box">     
+	    <div class="container-box">
+	    	<ul class="step-progress">
+	    		<li ng-class="{'active': stepOneActive}">
+		            <i>1</i><span>环境验证</span>
+	            </li>
+	            <li ng-class="{'active': stepTwoActive}">
+		            <i>2</i><span>认证登录</span>
+	            </li>
+	            <li ng-class="{'active': stepThreeActive}">
+		            <i>3</i><span>网络配置</span>
+	            </li>
+	    	</ul>    
+		</div>
+		<div class="container-box box-wrap">
+	    	<h4 class="title">
+	    		环境验证 	
+	    		<span class="clustercheck-tips">所有节点集群网络验证通过，且数据库、nomad、consul服务验证通过才能进行下一步操作！
+	    		</span>
+	    	</h4> 
+	    	<div class="cont-group group-item">
+	    		<label>验证：</label>
+	    		<div class="cont-item">
+	    			<button class="btn btn-next" ng-disabled="checkResult=='init'" ng-click="checkClusterStart()">环境验证</button>
+	    		</div>
+	    		<span class="icon-aw-load aw-spin" ng-if="checkResult=='init'"></span>
+	    		<!-- <span ng-class="{'green':checkResult=='success','red':checkResult=='fail'}">{{checkResult=='success'?'检测通过':""}}</span> -->
+	    	</div>
+	    	<div class="modal-box" ng-class="{'show':(checkResult=='success'||checkResult=='fail')}">
+			    <div class="modal">
+			      <div class="modal-body">
+			        <table class="table border">
+			          <thead>
+			            <tr>
+			              <th>目的节点</th>
+			              <th>集群网</th>
+			              <th>管理网</th>
+			              <th>存储网</th>
+			              <th>租户网</th>
+			            </tr>
+			          </thead>
+			          <tbody>
+			            <tr ng-repeat="(k,v) in checkedData">
+			              <td>{{k}}</td>
+			              <td ng-class="{'green':v.cluster.ping_success,'red':!v.cluster.ping_success}">{{v.cluster.ip}}&nbsp;&nbsp;{{v.cluster.ping_success?"网络连通":"网络不通"}}</td>
+			              <td ng-class="{'green':v.mgmt.ping_success,'red':!v.mgmt.ping_success}">{{v.mgmt.ip+" "}}&nbsp;&nbsp;{{v.mgmt.ping_success?"网络连通":"网络不通"}}</td>
+			              <td ng-class="{'green':v.storage.ping_success,'red':!v.storage.ping_success}">{{v.storage.ip+" "}}&nbsp;&nbsp;{{v.storage.ping_success?"网络连通":"网络不通"}}</td>
+			              <td ng-class="{'green':v.tenant.ping_success,'red':!v.tenant.ping_success}">{{v.tenant.ip+" "}}&nbsp;&nbsp;{{v.tenant.ping_success?"网络连通":"网络不通"}}</td>
+			            </tr>
+			            <tr>
+				            <td colspan="5">
+				            	源节点{{sourceNode}}&nbsp;&nbsp;&nbsp;&nbsp;
+				            	<span ng-class="{'green':mysql,'red':!mysql}" ng-show="mysql!='init'">数据库{{mysql?"连接通过":"连接不通"}}</span>&nbsp;&nbsp;&nbsp;&nbsp;
+				            	<span ng-class="{'green':consul_conn,'red':!consul_conn}" ng-show="mysql!='init'">consul服务{{consul_conn?"连接通过":"连接不通"}}</span>&nbsp;&nbsp;&nbsp;&nbsp;
+				            	<span ng-class="{'green':nomad_conn,'red':!nomad_conn}" ng-show="mysql!='init'">nomad服务{{nomad_conn?"连接通过":"连接不通"}}</span>
+				            </td>
+			            </tr>
+			          </tbody>
+			        </table>
+			      </div>
+			    </div>
+			  </div>
+			</div>
+		<span class="red" ng-if="checkResultTips">检测集群网联调失败</span>
+		<div class="text-center">
+	        <button class="btn btn-next" ng-click="nextStep()" ng-disabled="!nextBtn||!nomad_conn||!consul_conn||!mysql" type="button">{{'aws.register.info.next'|translate}}</button>
+	    </div>
+    </div>
+    <div class="delete-wrap" ng-if="showAlert">
+        <div class="delete-alert delete-show">
+            <div class="alert alert-danger">
+              <button type="button" class="close" ng-click="close()">
+                  <span aria-hidden="true">×</span>
+              </button>
+              <div class="del-cont">
+              	<span>网络和服务验证通过可直接登录云管地址，或点击“下一步”进入网络配置修改流程。</span>
+              </div>
+              <div class="btn-item">
+                <button type="button" class="btn btn-next" ng-click="close()">关闭</button>
+                <button type="button" class="btn btn-next" ng-click="toNext()">{{'aws.register.info.next'|translate}}</button>
+              </div>
+            </div>
+        </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,54 @@
+<div id="main">
+  <div class="container">
+    <div class="host-box">     
+	    <div class="container-box">
+	    	<ul class="step-progress">
+	    		<li ng-class="{'active': stepOneActive}">
+		            <i>1</i><span>集群网络验证</span>
+	            </li>
+	            <li ng-class="{'active': stepTwoActive}">
+		            <i>2</i><span>认证登录</span>
+	            </li>
+	            <li ng-class="{'active': stepThreeActive}">
+		            <i>3</i><span>网络配置</span>
+	            </li>
+	    	</ul>    
+		</div>
+		<div class="container-box box-wrap">
+	    	<h4 class="title">
+	    		认证登录 	
+	    	</h4>
+	    	<form name="loginForm" novalidate>
+		    	<div class="group-item control-group">
+		    		<label class="control-label">用户名：</label>
+		    		<div class="controls">
+		    			<input type="text" class="form-controls" name="username" ng-model="login.username" ng-pattern="/^([0-9a-zA-Z]|[\u4E00-\u9FA5]|\-)*$/" placeholder="请输入" ng-change="change()" required/>
+		    			<div class="error" ng-messages="loginForm.username.$error" ng-if="interacted(loginForm.username)">
+                            <form-validate pattern-msg="userNameErrorMsg"></form-validate>
+                        </div>
+		    		</div>
+		    	</div>
+		    	<div class="group-item  control-group">
+		    		<label class="control-label">密码：</label>
+		    		<div class="controls pass-item">
+		    			<input type="text"  class="form-controls" name="password" ng-model="login.password" ng-pattern="/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@._:,\/\-\^\%])[0-9a-zA-Z!@._:,\/\-\^\%]{8,16}$/" placeholder="请输入密码（例：Apass@word）" ng-show="!passwordType"
+		    			required  ng-change="change()"/>
+		    			<input type="password"  class="form-controls" name="password" ng-model="login.password" ng-pattern="/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@._:,\/\-\^\%])[0-9a-zA-Z!@._:,\/\-\^\%]{8,16}$/" placeholder="请输入密码（例：Apass@word）"  ng-show="passwordType" required  ng-change="change()"/>
+		    			<i ng-class="{'icon-aw-display':!passwordType,'icon-aw-no-display':passwordType}" ng-click="changeType()"></i>
+		    			<div class="error" ng-messages="loginForm.password.$error" ng-if="interacted(loginForm.password)">
+                            <form-validate pattern-msg="passwordErrorMsg"></form-validate>
+                        </div>
+		    		</div>
+		    	</div>
+	    	</form>
+		</div>
+		<div class="text-center red" ng-if="loginTips">
+			登录失败,请确认登录信息正确，点击“下一步”进行重新登录操作！
+	    </div>
+		<div class="text-center">
+			<button class="btn btn-next" ng-click="changeStep('/checkCluster')" ng-disabled="" type="button">{{'aws.register.info.last'|translate}}</button>
+	        <button class="btn btn-next" ng-click="loginSaas(loginForm,login)" ng-disabled="" type="button">{{'aws.register.info.next'|translate}}</button>
+	    </div>
+    </div>
+  </div>
+</div>

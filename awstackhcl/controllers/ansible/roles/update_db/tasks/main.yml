@@ -1,0 +1,25 @@
+---
+- name: backup saas db
+  shell: bash -xe "{{ role_path }}/files/mysql_backup.sh"
+  register: backup_result
+  failed_when: backup_result.rc!=0
+  delegate_to: "{{ groups['galera'][0] }}"
+  run_once: True
+
+- name: Set up ip Configuration
+  shell: python "{{ role_path }}/files/set_ipaddr.py" '{{ request }}'
+
+- name: update the saas ip in db
+  shell: python "{{ role_path }}/files/modify_saas_ip.py" '{{ request }}'
+  delegate_to: "{{ groups['galera'][0] }}"
+  run_once: True
+
+- name: update the mgmt ip in db
+  shell: python "{{ role_path }}/files/modify_mgmt_ip.py" '{{ request }}'
+  delegate_to: "{{ groups['galera'][0] }}"
+  run_once: True
+
+- name: update the floating ip in db
+  shell: python "{{ role_path }}/files/modify_floating_ip.py" '{{ request }}'
+  delegate_to: "{{ groups['galera'][0] }}"
+  run_once: True

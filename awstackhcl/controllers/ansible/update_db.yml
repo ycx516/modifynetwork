@@ -1,0 +1,6 @@
+---
+- hosts: all
+  name: Update Db
+  roles:
+    - { role: update_db, tags: update_db }
+

@@ -1,0 +1,249 @@
+---
+- name: Add ip_addr.json
+  include_vars: ip_addr.json
+
+- name: Convert old SaaS netmask
+  shell: echo {{ old_netmask }} |awk 'BEGIN{FS=".";OFS=";"}{$1=$1;print "obase=2;"$0}'|bc|paste -s -d ''|awk '/01/||length($0)>32||length($0)<11{print "ERROR NETMASK!";exit}{print split($0,a,1)-1}'
+  register: old_saas_ns
+
+- name: Convert SaaS netmask
+  shell: echo {{ netmask }} |awk 'BEGIN{FS=".";OFS=";"}{$1=$1;print "obase=2;"$0}'|bc|paste -s -d ''|awk '/01/||length($0)>32||length($0)<11{print "ERROR NETMASK!";exit}{print split($0,a,1)-1}'
+  register: saas_ns
+
+- name: Read Awstack Configuration
+  set_fact:
+    saas_code: "{{ ansible_local.awstack.saas.code }}"
+    tunnel_remote_port: "{{ lookup('pipe', 'consul-cli kv read settings/nova/tunnel_remote_port') }}"
+    old_netmask: "{{ old_saas_ns.stdout }}@{{ old_gateway }}"
+    netmask: "{{ saas_ns.stdout }}@{{ gateway }}"
+
+- name: Update mgmt Vlan
+  shell: ovs-vsctl clear Port patch-phy-mgmt tag
+  when: vlan_id == 0
+
+- name: Modify the ha vlan for mon network
+  shell: ovs-vsctl set Port patch-phy-mon tag={{ ha_vlan }}
+  when:
+    - ha_vlan != ""
+    - network_type == "vlan"
+
+- name: Delete the ha vlan for mon network
+  shell: ovs-vsctl clear Port patch-phy-mon tag
+  when:
+    - ha_vlan == ""
+    - network_type == "vlan"
+
+- name: Modify external_type in consul
+  shell: |
+    consul-cli kv write settings/neutron/external_type "vlan"
+    consul-cli kv write settings/neutron/external_vlan_ranges "physnet-ex1:{{ floating_vlan }}:{{ floating_vlan }}"
+  when: floating_vlan != ""
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: Modify external_type in consul
+  shell: consul-cli kv write settings/neutron/external_type "flat"
+  when: floating_vlan == ""
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: Modify vxlan_range in consul
+  shell: consul-cli kv write settings/neutron/vni_ranges "{{ vlan_start }}:{{ vlan_end }}"
+  when: network_type == "vxlan"
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: Modify vlan_range in consul
+  shell: consul-cli kv write settings/neutron/network_vlan_ranges "tenant:{{ vlan_start }}:{{ vlan_end }}"
+  when: network_type == "vlan"
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: Restart neutron
+  shell: |
+    nomad stop neutron-server
+    nomad run /etc/kolla/nomad/neutron-server.hcl
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: Modify the ntp servers in chrony
+  shell: sed -i 's/{{ old_ntp_servers }}/{{ ntp_servers }}/g' /etc/chrony.conf
+
+- name: Restart chrony
+  service: name=chronyd state=restarted enabled=yes
+
+- name: Modify saas addr in iptables
+  shell: sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /etc/sysconfig/iptables
+
+- name: Restart iptables
+  service: name=iptables state=restarted enabled=yes
+
+- name: Mark the saas pipework
+  shell: |
+    sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /usr/local/bin/saas-pipework.sh
+    sed -i 's/{{ old_netmask }}/{{ netmask }}/g' /usr/local/bin/saas-pipework.sh
+
+- name: Modify saas addr in saas-container
+  shell: sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /etc/kolla/nomad/saas-container.hcl
+
+- name: Stop saas container
+  shell: nomad stop saas-container
+  run_once: True
+  delegate_to: "{{ groups['saas-container'][0] }}"
+
+- name: Run saas container
+  shell: nomad run /etc/kolla/nomad/saas-container.hcl
+  run_once: True
+  delegate_to: "{{ groups['saas-container'][0] }}"
+
+- name: backup saas config
+  shell: cp /etc/awstack.conf /etc/awstack.conf-$(date +%Y%m%d-%H%M%S)
+
+- name: Mark the saas cloud_url
+  ini_file:
+    dest: /etc/awstack.conf
+    section: saas
+    option: cloud_url
+    value: "http://{{ saas_addr }}:80"
+
+- name: Mark the saas websocket_netloc
+  ini_file:
+    dest: /etc/awstack.conf
+    section: saas
+    option: websocket_netloc
+    value: "ws://{{ saas_addr }}:80/awstack-websocket"
+
+- name: check if tunnel.sh existed
+  stat: path=/usr/local/bin/tunnel.sh
+  register: file_existed
+
+- name: Modify tunnel-connector.hcl file
+  shell: sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /etc/kolla/nomad/tunnel-connector.hcl
+  when: file_existed.stat.exists != true
+
+- name: Modify tunnel.sh file
+  shell: sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /usr/local/bin/tunnel.sh
+  when: file_existed.stat.exists == true
+
+- name: stop tunnel connector
+  shell: nomad stop tunnel-connector
+  run_once: True
+  delegate_to: "{{ groups['haproxy'][0] }}"
+
+- name: Running Nomad Service
+  shell: nomad run /etc/kolla/nomad/tunnel-connector.hcl
+  run_once: True
+  delegate_to: "{{ groups['haproxy'][0] }}"
+
+#- name: Wait for tunnel to be up
+#  run_once: True
+#  delegate_to: "{{ groups['haproxy'][0] }}"
+#  uri:
+#    url: http://{{ saas_addr }}:{{ tunnel_remote_port }}
+#    status_code: 503
+#    timeout: 10
+#  register: tunnel_uri
+#  until: tunnel_uri.status == 503
+#  retries: 12
+#  delay: 10
+
+- name: config nova vnc
+  shell: |
+    consul-cli kv write settings/nova/tunnel_remote_address {{ saas_addr }}
+    sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /etc/nova/nova.conf
+
+- name: restart openstack-nova-compute
+  service: name=openstack-nova-compute state=restarted enabled=yes
+
+- name: Store new saas_addr in Consul
+  consul_kv_batch:
+    kvs:
+      - {"key": "settings/ceilometer/cloud_event_uri", "value": "http://{{ saas_addr }}:80/awstack-monitor/v1/resstatus/{{ saas_code }}"}
+      - {"key": "settings/nova/tunnel_remote_address", "value": "{{ saas_addr }}"}
+      - {"key": "settings/cluster/cloud_alram_rule_uri", "value": '"http://{{ saas_addr }}:80/awstack-monitor/back/v1/serviceAlarmRule/{{ saas_code }}"'}
+      - {"key": "settings/cluster/cloud_alram_uri", "value": '"http://{{ saas_addr }}:80/awstack-monitor/v1/alarm/events"'}
+      - {"key": "settings/cluster/cloud_event_uri", "value": '"http://{{ saas_addr }}:80/awstack-monitor/v1/resstatus/{{ saas_code }}"'}
+      - {"key": "settings/cluster/cloud_health_uri", "value": '"http://{{ saas_addr }}:80/awstack-monitor/back/v1/serviceAlarm"'}
+      - {"key": "settings/cluster/cloud_alarm_task", "value": '"http://{{ saas_addr }}:80/awstack-monitor/v1/alarm/tasks"'}
+      - {"key": "settings/cluster/cloud_histroy_statistics_uri", "value": '"http://{{ saas_addr }}:80/awstack-monitor/back/v1/history/statistics"'}
+      - {"key": "settings/cluster/cloud_alarm_task_sync", "value": '"http://{{ saas_addr }}:80/awstack-monitor/v1/alarm/tasks/sync"'}
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: stop ceilometer
+  shell: nomad stop ceilometer-service
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: stop healthcheck
+  shell: nomad stop clustercheck
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: Wait for Consul Cluster to Stabilize
+  pause: seconds=60
+  run_once: True
+
+- name: restart ceilometer
+  shell: nomad run /etc/kolla/nomad/ceilometer-service.hcl
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: healthcheck config file
+  shell: sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /etc/awstack-healthcheck/awstack-healthcheck.conf
+
+- name: restart healthcheck
+  shell: nomad run /etc/kolla/nomad/clustercheck.hcl
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: restarted metrics upload service
+  service: name=metric-upload state=restarted enabled=yes
+
+- name: restarted node healthcheck service
+  service: name=nodecheck state=restarted enabled=yes
+
+- name: heka config file
+  shell: sed -i 's/{{ old_saas_addr }}/{{ saas_addr }}/g' /etc/heka/hekad.toml
+
+- name: Start Heka service
+  service: name=heka state=restarted enabled=yes
+
+#- name: Waiting For SaaS to be read
+#  wait_for: port=80 host={{ saas_addr }} timeout=600
+
+- name: restarted awbob service
+  service: name=awbob state=restarted enabled=yes
+  when: inventory_hostname in groups['consul_servers']
+
+- name: modify openstack endpoint
+  shell: python {{ role_path }}/files/modify_openstack_endpoint.py {{ old_saas_addr }} {{ saas_addr }} {{ tunnel_remote_port }}
+  run_once: True
+  delegate_to: "{{ groups['consul_servers'][0] }}"
+
+- name: Delete the original external_net
+  shell: |
+    source /etc/kolla/openrc
+    neutron net-delete external_net
+  run_once: True
+  register: delete_net
+
+- name: Create new flat external_net
+  shell: |
+    source /etc/kolla/openrc
+    neutron net-create external_net --shared --router:external True --provider:network_type flat --provider:physical_network physnet-ex1
+    neutron subnet-create --name external_subnet --gateway {{ floating_gateway }} --allocation-pool start={{ floating_start }},end={{ floating_end }} --disable-dhcp external_net {{ floating_cidr }}
+  when:
+    - delete_net | success
+    - floating_vlan == ""
+  run_once: True
+
+- name: Create new vlan external_net
+  shell: |
+    source /etc/kolla/openrc
+    neutron net-create external_net --shared --router:external True --provider:network_type vlan --provider:physical_network physnet-ex1 --provider:segmentation_id {{ floating_vlan }}
+    neutron subnet-create --name external_subnet --gateway {{ floating_gateway }} --allocation-pool start={{ floating_start }},end={{ floating_end }} --disable-dhcp external_net {{ floating_cidr }}
+  when:
+    - delete_net | success
+    - floating_vlan != ""
+  run_once: True
